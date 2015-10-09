@@ -13,8 +13,15 @@
 #include <termios.h>
 #include <signal.h>
 
+#include<arpa/inet.h>
+#include<sys/socket.h>
+
+
 #define ON_KEY_PRESS 1
 #define ON_KEY_RELEASE 0
+#define BUFLEN 512
+#define SERVER "127.0.0.1"
+#define PORT 8888
 
 static int keepRunning = 1;
 
@@ -45,7 +52,7 @@ int main (int argc, char *argv[])
 {
   struct input_event event;
   int fd; 
-  
+
   char name[256] = "Unknown";
   char *device = NULL;
   int counter;
@@ -56,11 +63,27 @@ int main (int argc, char *argv[])
       exit (0);
     }
  
-  if ((getuid ()) != 0)
-    printf ("You are not root! This may not work...\n");
- 
   if (argc > 1)
     device = argv[1];
+
+
+  struct sockaddr_in si_other;
+  int s, i, slen=sizeof(si_other);
+  char buf[BUFLEN];
+  char message[BUFLEN];
+ 
+  if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+        perror_exit("socket");
+  }
+
+  memset((char *) &si_other, 0, sizeof(si_other));
+  si_other.sin_family = AF_INET;
+  si_other.sin_port = htons(PORT);
+     
+  if (inet_aton(SERVER , &si_other.sin_addr) == 0)
+  {
+        perror_exit("inet_aton() failed");
+  }
  
   signal(SIGINT, handler);
 
@@ -68,7 +91,6 @@ int main (int argc, char *argv[])
   if ((fd = open (device, O_RDONLY)) == -1)
     printf ("%s is not a vaild device.\n", device);
  
-  //Print Device Name
   ioctl (fd, EVIOCGNAME (sizeof (name)), name);
   printf ("Reading From : %s (%s)\n", device, name);
  
@@ -77,15 +99,21 @@ int main (int argc, char *argv[])
 
   counter=0;
   int code[10];
+  char x[10];
+  //count = 
   while (read(fd, &event, sizeof(struct input_event)) > 0 && keepRunning) {
     if (event.type != EV_KEY) continue;
     if (event.value == ON_KEY_PRESS) {
        if (event.code == KEY_ENTER) {
                 int i;
 		printf("ENTER\n");
-                for (i=0; i<10; i++)
+                for (i=0; i<10; i++) {
                   printf ("%d", code[i]);
+                }
                 printf ("\n");
+
+                sendto(s, code, sizeof(code) , 0 , (struct sockaddr *) &si_other, slen);
+
 		counter=0;
 		memset(&code,0,10);
        }
@@ -98,6 +126,7 @@ int main (int argc, char *argv[])
     } 
   }
   printf ("Exit..\n");
+  close(s);
   close(fd);
   return 0;
 } 
