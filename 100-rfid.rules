@@ -1,0 +1,1 @@
+SUBSYSTEMS=="usb" ATTRS{idVendor}=="05fe" ATTRS{idProduct}=="1010" MODE:="0777" SYMLINK+="RFID_reader"
