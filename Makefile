@@ -7,3 +7,6 @@ static: read_usb_hid.c
 
 clean:
 	rm read_usb_hid
+
+rpxc:
+	rpxc-gcc -O read_usb_hid.c -o read_usb_hid
